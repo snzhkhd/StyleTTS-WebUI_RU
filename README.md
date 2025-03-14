@@ -6,6 +6,7 @@
 # обученая на 1.3 часе модель на голосе Игоря Прокопенко
 https://huggingface.co/snzhkhd/StyleTTS_prokopenko_v1/tree/main
 
+так же нужно скачать это https://huggingface.co/papercup-ai/multilingual-pl-bert и закинуть в \venv\Lib\site-packages\styletts2\Utils\PLBERT
 
 # An all-in-one inferencing and training WebUI for StyleTTS.  The intended compatbility is meant for Windows, but should still work with a little bit of modification for WSL or Linux.
 > StyleTTS actually trains nicer in WSL than windows, so I might add compatibiltiy here sometime in the future.
