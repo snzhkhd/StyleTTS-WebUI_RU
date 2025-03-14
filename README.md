@@ -1,10 +1,13 @@
 # StyleTTS WebUI RU
 # Установка точно такая же как и была
 
-после установки закинуть файл utils.py из корневой в venv\Lib\site-packages\styletts2
-
 # обученая на 1.3 часе модель на голосе Игоря Прокопенко
 https://huggingface.co/snzhkhd/StyleTTS_prokopenko_v1/tree/main
+
+> поскольку я не в курсе как правильно сделать изменения в виртуальном пространстве что бы они были и у вас просто скиньте это в своё) eblan.gif
+
+
+после установки закинуть файл utils.py из корневой в venv\Lib\site-packages\styletts2
 
 так же нужно скачать это https://huggingface.co/papercup-ai/multilingual-pl-bert и закинуть в \venv\Lib\site-packages\styletts2\Utils\PLBERT
 
