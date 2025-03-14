@@ -39,7 +39,7 @@ from scipy.io.wavfile import write
 from styletts2.utils import *
 from modules.tortoise_dataset_tools.dataset_whisper_tools.dataset_maker_large_files import *
 from modules.tortoise_dataset_tools.dataset_whisper_tools.combine_folders import *
-
+from ruphon import RUPhon
 # Path to the settings file
 SETTINGS_FILE_PATH = "Configs/generate_settings.yaml"
 GENERATE_SETTINGS = {}
@@ -59,6 +59,7 @@ VALID_AUDIO_EXT = [
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 global_phonemizer = None
+global_accentizer = None
 model = None
 model_params = None
 sampler = None
@@ -66,20 +67,28 @@ textcleaner = None
 to_mel = None
 params_whole = None
 
+
 def load_all_models(model_path):
-    global global_phonemizer, model, model_params, sampler, textcleaner, to_mel, params_whole
+    global global_phonemizer,global_accentizer, model, model_params, sampler, textcleaner, to_mel, params_whole
     
     model_config = (get_model_configuration(model_path))
     if not model_config:
         return None
-    
+   
     config = load_configurations(model_config)
     
     
     sigma_value = config['model_params']['diffusion']['dist']['sigma_data']
     
     model, model_params = load_models_webui(sigma_value, device)
-    global_phonemizer = load_phonemizer()
+    if 'global_phonemizer' not in globals() or global_phonemizer is None:
+        global_phonemizer = RUPhon()
+        global_phonemizer = global_phonemizer.load("small", workdir="./models", device=device) #load_phonemizer()   #
+    
+    if 'global_accentizer' not in globals() or global_accentizer is None:
+        global_accentizer = RUAccent()
+        global_accentizer.load(omograph_model_size='turbo3', use_dictionary=True, tiny_mode=False)
+
     
     sampler = create_sampler(model)
     textcleaner = TextCleaner()
@@ -90,13 +99,17 @@ def load_all_models(model_path):
     return False
 
 def unload_all_models():
-    global global_phonemizer, model, model_params, sampler, textcleaner, to_mel, params_whole
+    global global_phonemizer,global_accentizer,  model, model_params, sampler, textcleaner, to_mel, params_whole
 
     if global_phonemizer:
         del global_phonemizer
         global_phonemizer = None
         print("Unloaded phonemizer")
-
+    if global_accentizer:
+        del global_accentizer
+        global_accentizer = None
+        print("Unloaded accentizer")
+        
     if model:
         del model
         model = None
@@ -183,9 +196,14 @@ def generate_audio(text, voice, reference_audio_file, seed, alpha, beta, diffusi
         texts = split_and_recombine_text(text)
         audios = []
         
+        print(f"\n----------------------inference,    text: {str(text)}")
+        #global_phonemizer = phonemizer.backend.EspeakBackend(language='ru', preserve_punctuation=True, with_stress=True)
+        
+        #global_phonemizer = RUPhon().load("big", workdir="./models", device='cpu')
+        
         # wav1 = inference(text, ref_s, model, sampler, textcleaner, to_mel, device, model_params, global_phonemizer=global_phonemizer, alpha=alpha, beta=beta, diffusion_steps=diffusion_steps, embedding_scale=embedding_scale)
         for t in texts:
-            audios.append(inference(t, ref_s, model, sampler, textcleaner, to_mel, device, model_params, global_phonemizer=global_phonemizer, alpha=alpha, beta=beta, diffusion_steps=diffusion_steps, embedding_scale=embedding_scale))
+            audios.append(inference(t, ref_s, model, sampler, textcleaner, to_mel, device, model_params, global_phonemizer=global_phonemizer,global_accentizer=global_accentizer, alpha=alpha, beta=beta, diffusion_steps=diffusion_steps, embedding_scale=embedding_scale))
 
         rtf = (time.time() - start)
         print(f"RTF = {rtf:5f}")
@@ -510,7 +528,7 @@ def transcribe_other_language_proxy(voice, language, chunk_size, continuation_di
         raise gr.Error(e)
         
     progress(1, desc="Transcription and processing completed successfully!")
-
+    whisper_model=None
     return "Transcription and processing completed successfully!"
 
 def phonemize_files(voice, progress=gr.Progress(track_tqdm=True)):
@@ -525,9 +543,9 @@ def phonemize_files(voice, progress=gr.Progress(track_tqdm=True)):
     from modules.styletts2_phonemizer.train_to_phoneme import process_file
     
     progress(0.0, desc="Train Phonemization Starting")
-    process_file(train_text_path, train_opt_path, option)
+    process_file(train_text_path, train_opt_path, option,global_phonemizer=global_phonemizer,global_accentizer=global_accentizer, language='ru')
     progress(0.9, desc="Validation Phonemization Starting")
-    process_file(validation_text_path, validation_opt_path, option)
+    process_file(validation_text_path, validation_opt_path, option,global_phonemizer=global_phonemizer,global_accentizer=global_accentizer, language='ru')
     
     return "Phonemization complete!"
     
@@ -588,8 +606,11 @@ def main():
                         with gr.Column():
                             GENERATE_SETTINGS["voice"] = gr.Dropdown(
                                 choices=voice_list_with_defaults, label="Voice", type="value", value=initial_settings["voice"])
-                            
-                            
+                            with gr.Row():
+                                GENERATE_SETTINGS["language"] = gr.Dropdown(
+                                    choices=["en", "ru"], label="Язык", value="ru"
+                                )
+                                                        
                             
                             GENERATE_SETTINGS["reference_audio_file"] = gr.Dropdown(
                                 choices=ref_audio_file_choices, label="Reference Audio", type="value", value=initial_settings["reference_audio_file"]
@@ -894,7 +915,8 @@ def main():
                                                 GENERATE_SETTINGS["embedding_scale"],
                                                 GENERATE_SETTINGS["voice_model"]], 
                                         outputs=[generation_output, seed_output])
-       
+       #,GENERATE_SETTINGS["language"]
+                                                
     webui_port = None         
     while webui_port == None:
         for i in range (7860, 7865):
