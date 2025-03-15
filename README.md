@@ -9,7 +9,7 @@ https://huggingface.co/snzhkhd/StyleTTS_prokopenko_v1/tree/main
 
 после установки закинуть файл utils.py из корневой в venv\Lib\site-packages\styletts2
 
-так же нужно скачать это https://huggingface.co/papercup-ai/multilingual-pl-bert и закинуть в \venv\Lib\site-packages\styletts2\Utils\PLBERT
+так же нужно скачать это https://huggingface.co/papercup-ai/multilingual-pl-bert и закинуть в \venv\Lib\site-packages\styletts2\Utils\PLBERT и ещё наверное лучше заменить в Utils\PLBERT тоже.
 
 # An all-in-one inferencing and training WebUI for StyleTTS.  The intended compatbility is meant for Windows, but should still work with a little bit of modification for WSL or Linux.
 > StyleTTS actually trains nicer in WSL than windows, so I might add compatibiltiy here sometime in the future.
